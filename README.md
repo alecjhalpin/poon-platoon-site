@@ -100,3 +100,8 @@ Blizzard and Raider.IO can independently lag behind in-game changes. The site is
 - Made the whole character card clickable while preserving external buttons.
 - Added Blizzard raid encounter progression by difficulty.
 - Added searchable Blizzard Mounts + Pets collections.
+
+## V4 polish
+- Armory stage now overlays the site's real `assets/pp-medallion.png` (PP + peach) over a dark center mask, so the generated paw emblem is no longer the visible guild mark.
+- Equipment tooltips are rendered in a viewport-aware floating layer and flip/reposition automatically instead of clipping at the bottom or sides of the Armory stage.
+- Mount and pet collection cards request Blizzard Game Data media and display the returned artwork, falling back to the PP mark only when Blizzard returns no usable media.

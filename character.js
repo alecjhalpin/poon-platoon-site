@@ -50,6 +50,51 @@ function gearCard(item, side = 'left') {
     <div class="item-tooltip" role="tooltip"><strong style="color:${cEscape(item.qualityColor || '#fff')}">${cEscape(item.name || '')}</strong>${tooltipRows(item)}</div>
   </div>`;
 }
+
+let floatingTooltip = null;
+function ensureFloatingTooltip() {
+  if (floatingTooltip) return floatingTooltip;
+  floatingTooltip = document.createElement('div');
+  floatingTooltip.className = 'floating-item-tooltip';
+  floatingTooltip.setAttribute('role','tooltip');
+  document.body.appendChild(floatingTooltip);
+  return floatingTooltip;
+}
+function positionFloatingTooltip(slot) {
+  const tip = ensureFloatingTooltip();
+  if (!tip.classList.contains('visible')) return;
+  const rect = slot.getBoundingClientRect();
+  const gap = 10;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left = rect.right + gap;
+  if (left + tw > vw - 10) left = rect.left - tw - gap;
+  left = Math.max(10, Math.min(left, vw - tw - 10));
+  let top = rect.top;
+  if (top + th > vh - 10) top = vh - th - 10;
+  top = Math.max(10, top);
+  tip.style.left = `${Math.round(left)}px`;
+  tip.style.top = `${Math.round(top)}px`;
+}
+function wireGearTooltips() {
+  const tip = ensureFloatingTooltip();
+  const hide = () => tip.classList.remove('visible');
+  document.querySelectorAll('.gear-slot').forEach(slot => {
+    const source = slot.querySelector('.item-tooltip');
+    if (!source) return;
+    const show = () => {
+      tip.innerHTML = source.innerHTML;
+      tip.classList.add('visible');
+      requestAnimationFrame(() => positionFloatingTooltip(slot));
+    };
+    slot.addEventListener('mouseenter', show);
+    slot.addEventListener('focusin', show);
+    slot.addEventListener('mouseleave', hide);
+    slot.addEventListener('focusout', hide);
+  });
+  window.addEventListener('scroll', hide, {passive:true});
+  window.addEventListener('resize', hide, {passive:true});
+}
 async function loadSidebar(currentName) {
   const list = document.getElementById('character-roster-list');
   if (!list) return;
@@ -66,11 +111,14 @@ function renderBlizzardRaids(raids) {
   if (!raids?.length) return '<p class="empty-note">No Blizzard raid encounter data returned yet.</p>';
   return raids.map(exp => `<section class="raid-expansion"><h3>${cEscape(exp.name)}</h3>${exp.instances.map(inst => `<div class="raid-instance"><div class="raid-instance-title">${cEscape(inst.name)}</div><div class="raid-mode-grid">${inst.modes.map(mode => `<div class="raid-mode"><small>${cEscape(mode.difficulty)}</small><strong>${num(mode.completed)}/${num(mode.total)}</strong><span>${mode.completed >= mode.total && mode.total > 0 ? 'Cleared' : 'Bosses defeated'}</span></div>`).join('')}</div></div>`).join('')}</section>`).join('');
 }
+function collectionImage(url, label) {
+  return url ? `<img src="${cEscape(url)}" alt="${cEscape(label)}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=&quot;collection-icon-fallback&quot;>PP</span>'" />` : '<span class="collection-icon-fallback">PP</span>';
+}
 function renderCollections(collections) {
   const mounts = collections?.mounts || []; const pets = collections?.pets || [];
   return `<div class="collection-toolbar"><button class="collection-subtab active" data-collection="mounts" type="button">Mounts <span>${mounts.length}</span></button><button class="collection-subtab" data-collection="pets" type="button">Pets <span>${pets.length}</span></button><input id="collection-search" type="search" placeholder="Search collections..." /></div>
-  <div class="collection-panel active" data-collection-panel="mounts"><div class="collection-grid">${mounts.length ? mounts.map(m => `<article class="collection-card"><div class="collection-icon">🐎</div><div><strong>${cEscape(m.name)}</strong><span>${m.favorite ? '★ Favorite · ' : ''}${m.usable ? 'Usable' : 'Not usable by this character'}</span></div></article>`).join('') : '<p class="empty-note">No mount collection data returned.</p>'}</div></div>
-  <div class="collection-panel" data-collection-panel="pets"><div class="collection-grid">${pets.length ? pets.map(p => `<article class="collection-card"><div class="collection-icon">🐾</div><div><strong>${cEscape(p.name)}</strong><span>${p.quality ? `${cEscape(p.quality)} · ` : ''}${p.level ? `Level ${cEscape(p.level)}` : 'Collected'}${p.favorite ? ' · ★ Favorite' : ''}</span></div></article>`).join('') : '<p class="empty-note">No pet collection data returned.</p>'}</div></div>`;
+  <div class="collection-panel active" data-collection-panel="mounts"><div class="collection-grid">${mounts.length ? mounts.map(m => `<article class="collection-card"><div class="collection-icon">${collectionImage(m.image,m.name)}</div><div><strong>${cEscape(m.name)}</strong><span>${m.favorite ? '★ Favorite · ' : ''}${m.usable ? 'Usable' : 'Not usable by this character'}</span></div></article>`).join('') : '<p class="empty-note">No mount collection data returned.</p>'}</div></div>
+  <div class="collection-panel" data-collection-panel="pets"><div class="collection-grid">${pets.length ? pets.map(p => `<article class="collection-card"><div class="collection-icon">${collectionImage(p.image,p.name)}</div><div><strong>${cEscape(p.name)}</strong><span>${p.quality ? `${cEscape(p.quality)} · ` : ''}${p.level ? `Level ${cEscape(p.level)}` : 'Collected'}${p.favorite ? ' · ★ Favorite' : ''}</span></div></article>`).join('') : '<p class="empty-note">No pet collection data returned.</p>'}</div></div>`;
 }
 function wireCollections() {
   const root = document.getElementById('collections-content'); if (!root) return;
@@ -95,6 +143,7 @@ function renderCharacter(data) {
   document.getElementById('gear-left').innerHTML = left.map(i=>gearCard(i,'left')).join('');
   document.getElementById('gear-right').innerHTML = right.map(i=>gearCard(i,'right')).join('');
   document.getElementById('gear-mobile').innerHTML = gear.length ? gear.map(i=>gearCard(i,'mobile')).join('') : '<p class="empty-note">No equipment data returned by Blizzard yet.</p>';
+  wireGearTooltips();
 
   document.getElementById('summary-ilvl').textContent=num(c.equippedItemLevel); document.getElementById('summary-mplus').textContent=rio.available?num(rio.mythicPlusScore):'—';
   const rioRaids=Array.isArray(rio.raid)?rio.raid:[]; const blizzRaids=Array.isArray(data.raids)?data.raids:[];

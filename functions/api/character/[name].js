@@ -138,15 +138,77 @@ function normalizeRaids(data) {
     })).filter(i => i.modes.length)
   })).filter(e => e.instances.length).reverse();
 }
-function normalizeMounts(data) {
-  return (data?.mounts || []).map(m => ({ id:m.mount?.id ?? null, name:m.mount?.name || 'Unknown Mount', favorite:Boolean(m.is_favorite), usable:m.is_useable !== false }));
+function firstMediaUrl(data) {
+  if (!data) return null;
+  const direct = mediaMap(data);
+  if (direct.icon) return direct.icon;
+  if (direct.avatar) return direct.avatar;
+  if (direct.main) return direct.main;
+  const assets = Array.isArray(data.assets) ? data.assets : [];
+  return assets.find(a => typeof a?.value === 'string')?.value || null;
 }
-function normalizePets(data) {
-  return (data?.pets || []).map(p => ({
+async function collectionMedia(kind, id, token) {
+  if (!id) return null;
+  const direct = await fetchJson(`https://${REGION}.api.blizzard.com/data/wow/media/${kind}/${id}?namespace=static-${REGION}&locale=en_US`, token, false);
+  const directUrl = firstMediaUrl(direct);
+  if (directUrl) return directUrl;
+
+  const detail = await fetchJson(`https://${REGION}.api.blizzard.com/data/wow/${kind}/${id}?namespace=static-${REGION}&locale=en_US`, token, false);
+  const hrefs = [
+    detail?.media?.key?.href,
+    detail?.creature_display?.key?.href,
+    detail?.creature_displays?.[0]?.key?.href,
+    detail?.creature?.key?.href
+  ].filter(Boolean);
+  for (const href of hrefs) {
+    const payload = await fetchJson(href, token, false);
+    const url = firstMediaUrl(payload);
+    if (url) return url;
+    const displayId = payload?.creature_display?.id || payload?.creature_displays?.[0]?.id;
+    if (displayId) {
+      const displayMedia = await fetchJson(`https://${REGION}.api.blizzard.com/data/wow/media/creature-display/${displayId}?namespace=static-${REGION}&locale=en_US`, token, false);
+      const displayUrl = firstMediaUrl(displayMedia);
+      if (displayUrl) return displayUrl;
+    }
+  }
+  const displayId = detail?.creature_display?.id || detail?.creature_displays?.[0]?.id;
+  if (displayId) {
+    const displayMedia = await fetchJson(`https://${REGION}.api.blizzard.com/data/wow/media/creature-display/${displayId}?namespace=static-${REGION}&locale=en_US`, token, false);
+    return firstMediaUrl(displayMedia);
+  }
+  return null;
+}
+async function mapLimited(items, limit, fn) {
+  const out = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (true) {
+      const i = cursor++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(limit,items.length)}, worker));
+  return out;
+}
+async function normalizeMounts(data, token) {
+  const mounts = data?.mounts || [];
+  return mapLimited(mounts, 8, async m => ({
+    id:m.mount?.id ?? null,
+    name:m.mount?.name || 'Unknown Mount',
+    favorite:Boolean(m.is_favorite),
+    usable:m.is_useable !== false,
+    image:await collectionMedia('mount', m.mount?.id, token)
+  }));
+}
+async function normalizePets(data, token) {
+  const pets = data?.pets || [];
+  return mapLimited(pets, 8, async p => ({
     id:p.species?.id ?? null, name:p.species?.name || 'Unknown Pet', level:p.level ?? null,
     quality:p.quality?.name || p.quality?.type || null, qualityType:p.quality?.type || null,
     favorite:Boolean(p.is_favorite), creatureId:p.creature?.id ?? null,
-    stats:p.stats ? { health:p.stats.health ?? null, power:p.stats.power ?? null, speed:p.stats.speed ?? null } : null
+    stats:p.stats ? { health:p.stats.health ?? null, power:p.stats.power ?? null, speed:p.stats.speed ?? null } : null,
+    image:await collectionMedia('pet', p.species?.id, token)
   }));
 }
 
@@ -214,7 +276,7 @@ export async function onRequestGet(context) {
       media:{ avatar:media.avatar || null, inset:media.inset || null, mainRaw:media['main-raw'] || media.main || null },
       gear, stats,
       achievements:{ totalPoints:achievementsData?.total_points ?? profile.achievement_points ?? null, totalQuantity:achievementsData?.total_quantity ?? null },
-      raids:normalizeRaids(raidsData), collections:{ mounts:normalizeMounts(mountsData), pets:normalizePets(petsData) },
+      raids:normalizeRaids(raidsData), collections:{ mounts:await normalizeMounts(mountsData, token), pets:await normalizePets(petsData, token) },
       raiderIo:rio, updatedAt:new Date().toISOString()
     }), { status:200, headers:JSON_HEADERS });
   } catch (error) {
