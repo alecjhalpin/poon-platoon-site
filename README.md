@@ -1,6 +1,6 @@
 # Poon Platoon Website
 
-Static website ready for Cloudflare Pages.
+Static website ready for Cloudflare Pages.       
 
 ## Files
 - `index.html` — site markup/content
