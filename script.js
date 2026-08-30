@@ -110,17 +110,19 @@ function renderRoster() {
   rosterGrid.innerHTML = shown.map((m, i) => {
     const rio = m.raiderIo || {};
     const classColor = CLASS_COLORS[m.className] || '#e6b955';
-    const portrait = rio.thumbnailUrl
-      ? `<img class="armory-portrait" src="${escapeHtml(rio.thumbnailUrl)}" alt="${escapeHtml(m.name)} portrait" loading="lazy" />`
+    const portraitUrl = m.blizzard?.media?.avatar || m.blizzard?.media?.inset || rio.thumbnailUrl || null;
+    const portrait = portraitUrl
+      ? `<img class="armory-portrait" src="${escapeHtml(portraitUrl)}" alt="${escapeHtml(m.name)} portrait" loading="lazy" />`
       : `<div class="armory-portrait armory-portrait-fallback">PP</div>`;
-    const specText = rio.available && rio.activeSpec ? ` · ${escapeHtml(rio.activeSpec)}` : '';
+    const activeSpec = m.blizzard?.activeSpec || rio.activeSpec || '';
+    const specText = activeSpec ? ` · ${escapeHtml(activeSpec)}` : '';
     const rioState = rio.available ? '' : `<span class="rio-pending">Raider.IO pending</span>`;
 
     return `<article class="roster-card armory-card" style="--class-color:${classColor};animation-delay:${Math.min(i * 35, 350)}ms">
       <div class="armory-card-header">
         ${portrait}
         <div class="roster-name-wrap">
-          <h3 class="roster-name">${escapeHtml(m.name)}</h3>
+          <h3 class="roster-name"><a class="character-card-link" href="${escapeHtml(m.localArmoryUrl || `/armory/${encodeURIComponent(m.name.toLowerCase())}`)}">${escapeHtml(m.name)}</a></h3>
           <div class="roster-character-meta"><span class="roster-class">${escapeHtml(m.className)}</span>${specText} · ${escapeHtml(m.raceName)}</div>
         </div>
         <span class="roster-rank-badge">${escapeHtml(m.guildRank)}</span>
@@ -128,7 +130,7 @@ function renderRoster() {
 
       <div class="armory-stats">
         <div class="armory-stat"><small>LEVEL</small><strong>${escapeHtml(m.level)}</strong></div>
-        <div class="armory-stat"><small>ITEM LEVEL</small><strong>${formatIlvl(rio.itemLevel)}</strong></div>
+        <div class="armory-stat"><small>ITEM LEVEL</small><strong>${formatIlvl(m.blizzard?.equippedItemLevel ?? rio.itemLevel)}</strong></div>
         <div class="armory-stat"><small>MYTHIC+ SCORE</small><strong>${formatScore(rio.mythicPlusScore)}</strong></div>
         <div class="armory-stat"><small>RAID</small><strong>${escapeHtml(raidLabel(rio.raid))}</strong></div>
       </div>
@@ -140,6 +142,7 @@ function renderRoster() {
           <a href="${escapeHtml(rio.profileUrl || m.raiderIoUrl)}" target="_blank" rel="noopener">RAIDER.IO ↗</a>
         </div>
       </div>
+      <a class="armory-card-overlay-link" href="${escapeHtml(m.localArmoryUrl || `/armory/${encodeURIComponent(m.name.toLowerCase())}`)}" aria-label="Open ${escapeHtml(m.name)} in the Poon Armory"></a>
     </article>`;
   }).join('');
 }
@@ -148,10 +151,7 @@ async function loadRoster() {
   if (!rosterGrid) return;
   setArmoryState('loading');
   try {
-    const response = await fetch(`/api/roster?v=${Date.now()}`, {
-      headers: { 'Accept': 'application/json' },
-      cache: 'no-store'
-    });
+    const response = await fetch('/api/roster', { headers: { 'Accept': 'application/json' } });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Armory request failed (${response.status})`);
 

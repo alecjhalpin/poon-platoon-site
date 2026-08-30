@@ -1,78 +1,93 @@
-# Poon Platoon Website
+# Poon Platoon Website — Poon Armory V2
 
-Static website ready for Cloudflare Pages.
+Production site: https://poonplatoon.com/
+Guild: Poon Platoon — Area 52 (US)
+Motto: No Poon Left Behind.
 
-## Files
-- `index.html` — site markup/content
-- `styles.css` — all styling/responsive design
-- `script.js` — Discord URL + menu/animations
-- `assets/poon-platoon-logo.png` — full cross-faction crest
-- `assets/pp-medallion.png` — PP icon / favicon
+This ZIP is a complete Cloudflare Pages / GitHub repository replacement. Upload its contents directly to the repository root.
 
-## Before launch
-Open `script.js` and replace:
+## Cloudflare Pages
 
-```js
-https://discord.gg/YOUR-INVITE
-```
+- Framework preset: None
+- Build command: blank
+- Build output directory: `/`
+- Root directory: `/`
+- Production branch: `main`
+- Build system: Version 3
 
-with the real guild Discord invite.
+### Required Production variables
 
-## Cloudflare Pages deployment
-### Easiest: Direct Upload
-1. Cloudflare Dashboard → Workers & Pages.
-2. Create application → Pages → Upload assets / Direct Upload.
-3. Name the project (for example `poon-platoon`).
-4. Upload the contents of this folder or the supplied ZIP.
-5. Deploy.
-6. In the Pages project: Custom domains → Set up a custom domain.
-7. Enter the domain already active in your Cloudflare account.
+The Pages Functions use these exact names:
 
-### GitHub option
-Put these files in a GitHub repo and connect that repo in Cloudflare Pages. This is better if you plan to update the site often.
+- `BNET_CLIENT_ID` — Text
+- `BNET_CLIENT_SECRET` — Secret
 
-For this plain static site there is no build command and the output directory is the repository root.
+Do not rename these unless the Functions are also changed.
 
-## Optional next upgrades
-- Discord server widget
-- Raider.IO / Warcraft Logs links
-- Guild roster page
-- Recruitment form
-- Raid schedule/events
-- `/discord` redirect through Cloudflare Redirect Rules
+## Armory architecture
 
+### `/armory`
+Live guild member grid.
 
-## Production additions
-- Discord invite wired to https://discord.gg/tNJgsmaM2f
-- SEO/meta tags, canonical URL, robots directives, and structured data
-- Open Graph/Twitter social preview metadata
-- Custom 404 page
-- robots.txt and sitemap.xml
+Blizzard is authoritative for:
+- guild membership
+- character names
+- class / race / level
+- active spec
+- equipped item level
+- character portraits / media
+- guild rank mapping
 
-## Live Blizzard roster
+Raider.IO is an optional enrichment source for:
+- current Mythic+ score
+- raid progression
+- Raider.IO profile link
 
-This build includes a Cloudflare Pages Function at `functions/api/roster.js` and a live roster section on the homepage.
+A character does not need the Poon Platoon guild itself to be indexed by Raider.IO for individual Raider.IO lookup to work.
 
-The function uses Blizzard's official WoW Profile API. Add these two encrypted environment variables in the Cloudflare Pages project:
+### `/armory/<character>`
+Example: `/armory/poonslurper`
 
-- `BNET_CLIENT_ID`
-- `BNET_CLIENT_SECRET`
+The pretty URL is served by `functions/armory/[name].js`, which loads the shared `character.html` shell. `character.js` then requests `/api/character/<name>`.
 
-Create the credentials from a Battle.net Developer API client. Never put the client secret in `script.js` or any browser-visible file.
+The individual character page includes:
+- original Poon Platoon war-room background
+- Blizzard character render (`main-raw`) with inset fallback
+- Blizzard avatar portraits
+- full character name, race, class, spec, faction, level and guild rank
+- equipped / average item level
+- Blizzard equipment list and item icons when returned by the API
+- combat-stat summary
+- Blizzard achievement summary
+- Raider.IO Mythic+ score and raid progress when available
+- official WoW Armory and Raider.IO links
+- clickable mini guild roster for switching characters
 
-Rank mapping is intentionally based on Blizzard's zero-based API field versus the Armory's one-based UI labels:
+## Guild rank mapping
 
-- API rank 0 / Guild Master -> Poon Daddy
-- API rank 1 / Armory Rank 2 -> VP of Poon
-- API rank 2 / Armory Rank 3 -> Goddess of Poon
-- API rank 3 / Armory Rank 4 -> Poon Connoisseur
-- API rank 4 / Armory Rank 5 -> Poon Trooper
-- API rank 5 / Armory Rank 6 -> Poon Searcher
+Blizzard API rank 0 = Guild Master in Blizzard's UI.
 
-## Poon Armory enrichment
-This build renames the public Roster page to Armory and keeps `/roster` redirected to `/armory`.
-The Cloudflare Pages Function still uses the exact Production variables:
-- `BNET_CLIENT_ID`
-- `BNET_CLIENT_SECRET`
+- API 0 → Poon Daddy
+- API 1 / Armory Rank 2 → VP of Poon
+- API 2 / Armory Rank 3 → Goddess of Poon
+- API 3 / Armory Rank 4 → Poon Connoisseur
+- API 4 / Armory Rank 5 → Poon Trooper
+- API 5 / Armory Rank 6 → Poon Searcher
 
-Blizzard remains the authoritative guild roster. Each returned guild character is then looked up individually through Raider.IO's public character profile API, so Raider.IO guild indexing is not required for character enrichment. The cards can show active spec, equipped item level, current Mythic+ score, raid progress, portrait, WoW Armory link, and Raider.IO link when that character profile is available.
+## Key files
+
+- `index.html` — homepage
+- `armory.html` — guild Armory grid
+- `character.html` — individual character Armory shell
+- `script.js` — shared site + guild Armory behavior
+- `character.js` — individual character Armory renderer
+- `styles.css` — all site + Armory styling
+- `functions/api/roster.js` — live Blizzard guild roster + Blizzard media + Raider.IO enrichment
+- `functions/api/character/[name].js` — detailed Blizzard character API + Raider.IO data
+- `functions/armory/[name].js` — pretty character route
+- `assets/pp-armory-warroom.jpg` — custom Poon Platoon character-page background
+- `_redirects` — legacy roster and `.html` redirects
+
+## Notes
+
+Blizzard and Raider.IO can independently lag behind in-game changes. The site is designed so Raider.IO being unavailable does not break Blizzard-backed character pages.

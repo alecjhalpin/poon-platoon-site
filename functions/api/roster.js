@@ -15,7 +15,6 @@ const RACE_NAMES = {
   52:'Dracthyr', 70:'Dracthyr', 84:'Earthen', 85:'Earthen'
 };
 
-// Blizzard API rank 0 = Guild Master, rank 1 = Armory Rank 2, etc.
 const GUILD_RANKS = {
   0:'Poon Daddy',
   1:'VP of Poon',
@@ -29,7 +28,6 @@ const JSON_HEADERS = {
   'Content-Type':'application/json; charset=utf-8',
   'Cache-Control':'public, max-age=120, s-maxage=600'
 };
-
 const ERROR_HEADERS = {
   'Content-Type':'application/json; charset=utf-8',
   'Cache-Control':'no-store, no-cache, must-revalidate, max-age=0'
@@ -37,14 +35,13 @@ const ERROR_HEADERS = {
 
 async function getAccessToken(clientId, clientSecret) {
   const auth = btoa(`${clientId}:${clientSecret}`);
-  const body = new URLSearchParams({ grant_type: 'client_credentials' });
   const response = await fetch('https://oauth.battle.net/token', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
+    method:'POST',
+    headers:{
+      'Authorization':`Basic ${auth}`,
+      'Content-Type':'application/x-www-form-urlencoded'
     },
-    body
+    body:new URLSearchParams({ grant_type:'client_credentials' })
   });
   if (!response.ok) throw new Error(`Battle.net OAuth failed (${response.status})`);
   const data = await response.json();
@@ -52,25 +49,36 @@ async function getAccessToken(clientId, clientSecret) {
   return data.access_token;
 }
 
+async function blizzardJson(url, token) {
+  const response = await fetch(url, { headers:{ 'Authorization':`Bearer ${token}`, 'Accept':'application/json' } });
+  if (!response.ok) throw new Error(`Blizzard request failed (${response.status})`);
+  return response.json();
+}
+
+function mediaAssets(data) {
+  const map = {};
+  for (const asset of data?.assets || []) if (asset?.key && asset?.value) map[asset.key] = asset.value;
+  return {
+    avatar: map.avatar || null,
+    inset: map.inset || null,
+    mainRaw: map['main-raw'] || map.main || null
+  };
+}
+
 function pickRaidProgress(raidProgression) {
   if (!raidProgression || typeof raidProgression !== 'object') return null;
   const entries = Object.entries(raidProgression);
   if (!entries.length) return null;
-
-  // Prefer a raid with actual progress. Raider.IO normally returns current-tier raids here.
-  const withProgress = entries.find(([, p]) =>
-    p && ((p.mythic_bosses_killed || 0) + (p.heroic_bosses_killed || 0) + (p.normal_bosses_killed || 0) > 0)
-  );
+  const withProgress = entries.find(([, p]) => p && ((p.mythic_bosses_killed || 0) + (p.heroic_bosses_killed || 0) + (p.normal_bosses_killed || 0) > 0));
   const [slug, raid] = withProgress || entries[0];
   if (!raid) return null;
-
   return {
     slug,
-    summary: raid.summary || null,
-    totalBosses: raid.total_bosses ?? null,
-    normal: raid.normal_bosses_killed ?? 0,
-    heroic: raid.heroic_bosses_killed ?? 0,
-    mythic: raid.mythic_bosses_killed ?? 0
+    summary:raid.summary || null,
+    totalBosses:raid.total_bosses ?? null,
+    normal:raid.normal_bosses_killed ?? 0,
+    heroic:raid.heroic_bosses_killed ?? 0,
+    mythic:raid.mythic_bosses_killed ?? 0
   };
 }
 
@@ -80,43 +88,50 @@ async function fetchRaiderIoProfile(member) {
   url.searchParams.set('realm', member.realmSlug || REALM);
   url.searchParams.set('name', member.name);
   url.searchParams.set('fields', 'gear,mythic_plus_scores_by_season:current,raid_progression');
-
   try {
-    const response = await fetch(url.toString(), {
-      headers: { 'Accept':'application/json', 'User-Agent':'Poon-Platoon-Website/1.0' }
-    });
-
-    // A character can be missing or temporarily stale on Raider.IO; never fail the whole Armory for one toon.
-    if (!response.ok) {
-      return { available:false, status:response.status };
-    }
-
+    const response = await fetch(url.toString(), { headers:{ 'Accept':'application/json', 'User-Agent':'Poon-Platoon-Website/2.0' } });
+    if (!response.ok) return { available:false, status:response.status };
     const data = await response.json();
-    const season = Array.isArray(data.mythic_plus_scores_by_season)
-      ? data.mythic_plus_scores_by_season[0]
-      : null;
-
+    const season = Array.isArray(data.mythic_plus_scores_by_season) ? data.mythic_plus_scores_by_season[0] : null;
     return {
       available:true,
-      profileUrl: data.profile_url || member.raiderIoUrl,
-      thumbnailUrl: data.thumbnail_url || null,
-      activeSpec: data.active_spec_name || null,
-      activeRole: data.active_spec_role || null,
-      itemLevel: data.gear?.item_level_equipped ?? null,
-      achievementPoints: data.achievement_points ?? null,
-      mythicPlusScore: season?.scores?.all ?? null,
-      raid: pickRaidProgress(data.raid_progression)
+      profileUrl:data.profile_url || member.raiderIoUrl,
+      thumbnailUrl:data.thumbnail_url || null,
+      activeSpec:data.active_spec_name || null,
+      activeRole:data.active_spec_role || null,
+      itemLevel:data.gear?.item_level_equipped ?? null,
+      achievementPoints:data.achievement_points ?? null,
+      mythicPlusScore:season?.scores?.all ?? null,
+      raid:pickRaidProgress(data.raid_progression)
     };
   } catch {
     return { available:false, status:0 };
   }
 }
 
+async function enrichBlizzard(member, token) {
+  const slug = encodeURIComponent(member.name.toLowerCase());
+  const base = `https://${REGION}.api.blizzard.com/profile/wow/character/${member.realmSlug}/${slug}`;
+  const [profileResult, mediaResult] = await Promise.allSettled([
+    blizzardJson(`${base}?namespace=profile-${REGION}&locale=en_US`, token),
+    blizzardJson(`${base}/character-media?namespace=profile-${REGION}&locale=en_US`, token)
+  ]);
+  const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
+  const media = mediaResult.status === 'fulfilled' ? mediaAssets(mediaResult.value) : { avatar:null, inset:null, mainRaw:null };
+  return {
+    activeSpec:profile?.active_spec?.name || null,
+    equippedItemLevel:profile?.equipped_item_level ?? null,
+    averageItemLevel:profile?.average_item_level ?? null,
+    achievementPoints:profile?.achievement_points ?? null,
+    faction:profile?.faction?.name || null,
+    media
+  };
+}
+
 export async function onRequestGet(context) {
   const env = context?.env || {};
   const clientId = env.BNET_CLIENT_ID;
   const clientSecret = env.BNET_CLIENT_SECRET;
-
   if (!clientId || !clientSecret) {
     return new Response(JSON.stringify({
       error:'Cloudflare Pages Function cannot see one or both Battle.net credentials.',
@@ -124,59 +139,53 @@ export async function onRequestGet(context) {
       hasClientId:Boolean(clientId),
       hasClientSecret:Boolean(clientSecret),
       envKeys:Object.keys(env).sort(),
-      functionVersion:'armory-v1-2026-08-30'
+      functionVersion:'armory-v2-2026-08-30'
     }), { status:503, headers:ERROR_HEADERS });
   }
 
   try {
     const token = await getAccessToken(clientId, clientSecret);
-    const blizzardUrl = `https://${REGION}.api.blizzard.com/data/wow/guild/${REALM}/${GUILD}/roster?namespace=profile-${REGION}&locale=en_US`;
-    const response = await fetch(blizzardUrl, { headers: { 'Authorization': `Bearer ${token}` } });
-    if (!response.ok) throw new Error(`Blizzard roster request failed (${response.status})`);
-    const data = await response.json();
+    const rosterUrl = `https://${REGION}.api.blizzard.com/data/wow/guild/${REALM}/${GUILD}/roster?namespace=profile-${REGION}&locale=en_US`;
+    const data = await blizzardJson(rosterUrl, token);
 
     const baseMembers = (data.members || []).map(entry => {
       const c = entry.character || {};
       const apiRank = Number.isFinite(entry.rank) ? entry.rank : Number(entry.rank || 0);
       const name = c.name || 'Unknown';
       const realmSlug = c.realm?.slug || REALM;
-      const className = CLASS_NAMES[c.playable_class?.id] || `Class ${c.playable_class?.id ?? '?'}`;
-      const raceName = RACE_NAMES[c.playable_race?.id] || `Race ${c.playable_race?.id ?? '?'}`;
       return {
         name,
-        level: c.level ?? '?',
-        className,
-        raceName,
+        characterSlug:name.toLowerCase(),
+        level:c.level ?? '?',
+        className:CLASS_NAMES[c.playable_class?.id] || `Class ${c.playable_class?.id ?? '?'}`,
+        raceName:RACE_NAMES[c.playable_race?.id] || `Race ${c.playable_race?.id ?? '?'}`,
         realmSlug,
         apiRank,
-        armoryRank: apiRank === 0 ? 'Guild Master' : `Rank ${apiRank + 1}`,
-        guildRank: GUILD_RANKS[apiRank] || `Rank ${apiRank + 1}`,
-        armoryUrl: `https://worldofwarcraft.blizzard.com/en-us/character/us/${realmSlug}/${encodeURIComponent(name.toLowerCase())}`,
-        raiderIoUrl: `https://raider.io/characters/us/${realmSlug}/${encodeURIComponent(name)}`
+        armoryRank:apiRank === 0 ? 'Guild Master' : `Rank ${apiRank + 1}`,
+        guildRank:GUILD_RANKS[apiRank] || `Rank ${apiRank + 1}`,
+        armoryUrl:`https://worldofwarcraft.blizzard.com/en-us/character/us/${realmSlug}/${encodeURIComponent(name.toLowerCase())}`,
+        raiderIoUrl:`https://raider.io/characters/us/${realmSlug}/${encodeURIComponent(name)}`,
+        localArmoryUrl:`/armory/${encodeURIComponent(name.toLowerCase())}`
       };
     }).sort((a,b) => a.apiRank - b.apiRank || a.name.localeCompare(b.name));
 
-    // Raider.IO character profiles work even before the guild itself is indexed there.
-    const enrichedMembers = await Promise.all(baseMembers.map(async member => ({
-      ...member,
-      raiderIo: await fetchRaiderIoProfile(member)
-    })));
+    const enrichedMembers = await Promise.all(baseMembers.map(async member => {
+      const [blizzard, raiderIo] = await Promise.all([
+        enrichBlizzard(member, token),
+        fetchRaiderIoProfile(member)
+      ]);
+      return { ...member, blizzard, raiderIo };
+    }));
 
     const rioCount = enrichedMembers.filter(m => m.raiderIo?.available).length;
-
     return new Response(JSON.stringify({
-      guild:'Poon Platoon',
-      region:'US',
-      realm:'Area 52',
-      updatedAt:new Date().toISOString(),
-      raiderIoProfilesFound:rioCount,
-      members:enrichedMembers
+      guild:'Poon Platoon', region:'US', realm:'Area 52', updatedAt:new Date().toISOString(),
+      raiderIoProfilesFound:rioCount, members:enrichedMembers
     }), { status:200, headers:JSON_HEADERS });
   } catch (error) {
     return new Response(JSON.stringify({
       error:error.message || 'Unable to load Armory.',
-      stage:'blizzard-request',
-      functionVersion:'armory-v1-2026-08-30'
+      stage:'blizzard-request', functionVersion:'armory-v2-2026-08-30'
     }), { status:502, headers:ERROR_HEADERS });
   }
 }

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#080a10" />
+  <title>Character Armory | Poon Platoon</title>
+  <meta name="description" content="Poon Platoon character Armory powered by Blizzard profile data and Raider.IO enrichment." />
+  <meta name="robots" content="index, follow" />
+  <link rel="icon" href="/assets/pp-medallion.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="character-armory-page">
+  <div class="page-bg" aria-hidden="true"><div class="faction-glow alliance"></div><div class="faction-glow horde"></div><div class="embers" id="embers"></div></div>
+  <header class="site-header" id="top">
+    <a class="brand" href="/" aria-label="Poon Platoon home"><img src="/assets/pp-medallion.png" alt="" /><span>POON PLATOON</span></a>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="nav-links" aria-label="Primary navigation">
+      <a href="/#about">About</a><a href="/#activities">Operations</a><a href="/#ranks">Ranks</a><a href="/armory" aria-current="page">Armory</a><a href="/#recruitment">Recruitment</a><a class="nav-cta discord-link" href="#" target="_blank" rel="noopener">Discord</a>
+    </nav>
+  </header>
+
+  <main class="character-shell" id="character-app">
+    <section id="character-loading" class="character-loading-panel">
+      <img src="/assets/pp-medallion.png" alt="" />
+      <div><strong>Summoning character data...</strong><span>Blizzard is checking the armory, pockets, and questionable transmog choices.</span></div>
+    </section>
+
+    <section id="character-error" class="character-error-panel" hidden>
+      <img src="/assets/pp-medallion.png" alt="" />
+      <div><strong>Character went AWOL.</strong><span id="character-error-text">Could not load this character.</span><a href="/armory">← Back to the Poon Armory</a></div>
+    </section>
+
+    <section id="character-view" class="character-view" hidden>
+      <aside class="character-roster-panel">
+        <a href="/armory" class="back-armory">← Back to Armory</a>
+        <div class="character-roster-current" id="character-roster-current"></div>
+        <div class="character-roster-list" id="character-roster-list"></div>
+      </aside>
+
+      <div class="character-stage-wrap">
+        <div class="character-stage" id="character-stage">
+          <div class="stage-gradient"></div>
+          <div class="character-heading">
+            <p class="eyebrow">POON PLATOON ARMORY</p>
+            <h1 id="character-name">Character</h1>
+            <p class="character-rank" id="character-rank"></p>
+            <p class="character-subtitle" id="character-subtitle"></p>
+          </div>
+
+          <div class="gear-column gear-column-left" id="gear-left"></div>
+          <div class="character-render-wrap">
+            <img id="character-render" class="character-render" alt="" />
+            <img id="character-render-fallback" class="character-render-fallback" src="/assets/poon-platoon-logo.png" alt="Poon Platoon crest" hidden />
+          </div>
+          <div class="gear-column gear-column-right" id="gear-right"></div>
+
+          <div class="character-tabs" role="tablist" aria-label="Character Armory sections">
+            <button class="character-tab active" data-tab="gear" type="button">Gear</button>
+            <button class="character-tab" data-tab="stats" type="button">Stats</button>
+            <button class="character-tab" data-tab="progress" type="button">Progression</button>
+            <button class="character-tab" data-tab="achievements" type="button">Achievements</button>
+          </div>
+        </div>
+
+        <div class="character-tab-content">
+          <section class="character-pane active" data-pane="gear">
+            <div class="pane-heading"><span>Equipped Loadout</span><small>Live Blizzard equipment data</small></div>
+            <div id="gear-mobile" class="gear-mobile-grid"></div>
+          </section>
+          <section class="character-pane" data-pane="stats">
+            <div class="pane-heading"><span>Combat Stats</span><small>Blizzard character statistics</small></div>
+            <div id="stats-grid" class="detail-stats-grid"></div>
+          </section>
+          <section class="character-pane" data-pane="progress">
+            <div class="pane-heading"><span>Progression</span><small>Raider.IO character enrichment</small></div>
+            <div id="progress-grid" class="progress-grid"></div>
+          </section>
+          <section class="character-pane" data-pane="achievements">
+            <div class="pane-heading"><span>Achievements</span><small>Blizzard achievement summary</small></div>
+            <div id="achievement-grid" class="achievement-grid"></div>
+          </section>
+        </div>
+      </div>
+
+      <aside class="character-summary-panel">
+        <div class="summary-block summary-ilvl"><span>Item Level</span><strong id="summary-ilvl">—</strong><small>Equipped</small></div>
+        <div class="summary-divider"></div>
+        <div class="summary-block"><span>Mythic+</span><strong id="summary-mplus">—</strong><small>Current score</small></div>
+        <div class="summary-divider"></div>
+        <div class="summary-block"><span>Raid Progression</span><div id="summary-raid" class="summary-raid">Raider.IO pending</div></div>
+        <div class="summary-divider"></div>
+        <div class="summary-block"><span>Character Info</span><dl id="summary-info" class="summary-info"></dl></div>
+        <div class="character-external-links">
+          <a id="character-wow-link" href="#" target="_blank" rel="noopener">View on WoW Armory ↗</a>
+          <a id="character-rio-link" href="#" target="_blank" rel="noopener">View on Raider.IO ↗</a>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="footer section-shell"><div class="footer-brand"><img src="/assets/pp-medallion.png" alt="" /><div><strong>POON PLATOON</strong><span>No Poon Left Behind.</span></div></div><p>© <span id="year"></span> Poon Platoon — All Poon Reserved.</p></footer>
+  <script src="/script.js"></script>
+  <script src="/character.js"></script>
+</body>
+</html>
