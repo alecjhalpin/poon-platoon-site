@@ -44,16 +44,29 @@ async function getAccessToken(clientId, clientSecret) {
 }
 
 export async function onRequestGet(context) {
-  const { BNET_CLIENT_ID, BNET_CLIENT_SECRET } = context.env;
-  const headers = {
+  // These names intentionally match the Cloudflare Production variables exactly.
+  const env = context?.env || {};
+  const BNET_CLIENT_ID = env.BNET_CLIENT_ID;
+  const BNET_CLIENT_SECRET = env.BNET_CLIENT_SECRET;
+
+  const successHeaders = {
     'Content-Type':'application/json; charset=utf-8',
     'Cache-Control':'public, max-age=300, s-maxage=900'
+  };
+  const errorHeaders = {
+    'Content-Type':'application/json; charset=utf-8',
+    'Cache-Control':'no-store, no-cache, must-revalidate, max-age=0'
   };
 
   if (!BNET_CLIENT_ID || !BNET_CLIENT_SECRET) {
     return new Response(JSON.stringify({
-      error:'Roster API is ready, but the Blizzard API credentials have not been added to Cloudflare yet.'
-    }), { status:503, headers });
+      error:'Cloudflare Pages Function cannot see one or both Battle.net credentials.',
+      expectedVariables:['BNET_CLIENT_ID','BNET_CLIENT_SECRET'],
+      hasClientId:Boolean(BNET_CLIENT_ID),
+      hasClientSecret:Boolean(BNET_CLIENT_SECRET),
+      envKeys:Object.keys(env).sort(),
+      functionVersion:'roster-fix-2026-08-30'
+    }), { status:503, headers:errorHeaders });
   }
 
   try {
@@ -85,8 +98,12 @@ export async function onRequestGet(context) {
 
     return new Response(JSON.stringify({
       guild:'Poon Platoon', region:'US', realm:'Area 52', updatedAt:new Date().toISOString(), members
-    }), { status:200, headers });
+    }), { status:200, headers:successHeaders });
   } catch (error) {
-    return new Response(JSON.stringify({ error:error.message || 'Unable to load roster.' }), { status:502, headers });
+    return new Response(JSON.stringify({
+      error:error.message || 'Unable to load roster.',
+      stage:'blizzard-request',
+      functionVersion:'roster-fix-2026-08-30'
+    }), { status:502, headers:errorHeaders });
   }
 }
