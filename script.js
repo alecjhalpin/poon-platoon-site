@@ -1,17 +1,10 @@
 // === POON PLATOON SITE CONFIG ===
-// Replace this with your real Discord invite when ready.
 const SITE_CONFIG = {
-  discordInvite: "https://discord.gg/YOUR-INVITE"
+  discordInvite: "https://discord.gg/tNJgsmaM2f"
 };
 
 document.querySelectorAll('.discord-link').forEach(link => {
   link.href = SITE_CONFIG.discordInvite;
-  link.addEventListener('click', (event) => {
-    if (SITE_CONFIG.discordInvite.includes('YOUR-INVITE')) {
-      event.preventDefault();
-      alert('Add your Discord invite in script.js first, Poon Daddy.');
-    }
-  });
 });
 
 document.getElementById('year').textContent = new Date().getFullYear();

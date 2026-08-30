@@ -40,3 +40,11 @@ For this plain static site there is no build command and the output directory is
 - Recruitment form
 - Raid schedule/events
 - `/discord` redirect through Cloudflare Redirect Rules
+
+
+## Production additions
+- Discord invite wired to https://discord.gg/tNJgsmaM2f
+- SEO/meta tags, canonical URL, robots directives, and structured data
+- Open Graph/Twitter social preview metadata
+- Custom 404 page
+- robots.txt and sitemap.xml
