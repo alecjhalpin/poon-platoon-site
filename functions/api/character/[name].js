@@ -49,7 +49,7 @@ function raidProgress(raidProgression) {
     normal:r?.normal_bosses_killed ?? 0,
     heroic:r?.heroic_bosses_killed ?? 0,
     mythic:r?.mythic_bosses_killed ?? 0
-  })).filter(r => r.summary || r.normal || r.heroic || r.mythic).slice(0,4);
+  })).filter(r => r.summary || r.normal || r.heroic || r.mythic).slice(0,6);
 }
 
 async function fetchRaiderIo(name, realmSlug) {
@@ -59,7 +59,7 @@ async function fetchRaiderIo(name, realmSlug) {
   url.searchParams.set('name', name);
   url.searchParams.set('fields', 'gear,mythic_plus_scores_by_season:current,raid_progression');
   try {
-    const response = await fetch(url.toString(), { headers:{ 'Accept':'application/json', 'User-Agent':'Poon-Platoon-Website/2.0' } });
+    const response = await fetch(url.toString(), { headers:{ 'Accept':'application/json', 'User-Agent':'Poon-Platoon-Website/3.0' } });
     if (!response.ok) return { available:false, status:response.status };
     const data = await response.json();
     const season = Array.isArray(data.mythic_plus_scores_by_season) ? data.mythic_plus_scores_by_season[0] : null;
@@ -78,24 +78,76 @@ async function fetchRaiderIo(name, realmSlug) {
   }
 }
 
-function normalizeStat(value) {
-  if (typeof value === 'number') return value;
-  if (value && typeof value === 'object') return value.value ?? value.rating ?? value.rating_bonus ?? value.value_percent ?? null;
-  return null;
+function effective(stat) {
+  if (typeof stat === 'number') return stat;
+  if (!stat || typeof stat !== 'object') return null;
+  return stat.effective ?? stat.value ?? stat.base ?? null;
 }
-
+function ratedValue(stat) {
+  if (typeof stat === 'number') return stat;
+  return stat?.value ?? stat?.rating_bonus ?? null;
+}
 function qualityColor(type) {
-  const colors = {
-    POOR:'#9d9d9d', COMMON:'#ffffff', UNCOMMON:'#1eff00', RARE:'#0070dd', EPIC:'#a335ee',
-    LEGENDARY:'#ff8000', ARTIFACT:'#e6cc80', HEIRLOOM:'#00ccff'
-  };
+  const colors = { POOR:'#9d9d9d', COMMON:'#ffffff', UNCOMMON:'#1eff00', RARE:'#0070dd', EPIC:'#a335ee', LEGENDARY:'#ff8000', ARTIFACT:'#e6cc80', HEIRLOOM:'#00ccff' };
   return colors[type] || '#d8d8d8';
 }
-
 async function getItemIcon(itemId, token) {
   if (!itemId) return null;
   const data = await fetchJson(`https://${REGION}.api.blizzard.com/data/wow/media/item/${itemId}?namespace=static-${REGION}&locale=en_US`, token, false);
   return mediaMap(data).icon || null;
+}
+function moneyParts(sellPrice) {
+  if (!sellPrice?.value) return null;
+  const copper = Number(sellPrice.value) || 0;
+  return { gold:Math.floor(copper/10000), silver:Math.floor((copper%10000)/100), copper:copper%100 };
+}
+function normalizeGearItem(item, icon) {
+  const stats = (item.stats || []).map(s => ({
+    type:s.type?.name || s.type?.type || 'Stat',
+    value:s.value ?? s.display?.display_string ?? null,
+    display:s.display?.display_string || null,
+    isNegated:Boolean(s.is_negated)
+  }));
+  return {
+    slot:item.slot?.name || item.slot?.type || 'Gear', slotType:item.slot?.type || '',
+    name:item.name || `Item ${item.item?.id || ''}`, itemId:item.item?.id || null,
+    itemLevel:item.level?.value ?? null, quality:item.quality?.name || item.quality?.type || null,
+    qualityType:item.quality?.type || null, qualityColor:qualityColor(item.quality?.type), icon,
+    binding:item.binding?.name || null, inventoryType:item.inventory_type?.name || null,
+    itemClass:item.item_class?.name || null, itemSubclass:item.item_subclass?.name || null,
+    armor:item.armor?.value ?? null, durability:item.durability?.display_string || null,
+    requirements:item.requirements?.level?.display_string || null,
+    transmog:item.transmog?.display_string || null,
+    sockets:(item.sockets || []).map(s => ({ socketType:s.socket_type?.name || s.socket_type?.type || null, itemName:s.item?.name || null, display:s.display_string || null })),
+    enchantments:(item.enchantments || []).map(e => e.display_string).filter(Boolean),
+    spells:(item.spells || []).map(s => s.description).filter(Boolean),
+    stats, sellPrice:moneyParts(item.sell_price), nameDescription:item.name_description?.display_string || null
+  };
+}
+function normalizeRaids(data) {
+  const expansions = Array.isArray(data?.expansions) ? data.expansions : [];
+  return expansions.map(exp => ({
+    name:exp.expansion?.name || 'Expansion', id:exp.expansion?.id ?? null,
+    instances:(exp.instances || []).map(inst => ({
+      name:inst.instance?.name || 'Raid', id:inst.instance?.id ?? null,
+      modes:(inst.modes || []).map(mode => ({
+        difficulty:mode.difficulty?.name || mode.difficulty?.type || 'Unknown', difficultyType:mode.difficulty?.type || '',
+        completed:mode.progress?.completed_count ?? 0, total:mode.progress?.total_count ?? 0,
+        encounters:(mode.progress?.encounters || []).map(e => ({ name:e.encounter?.name || 'Boss', completed:e.completed_count ?? 0, lastKillTimestamp:e.last_kill_timestamp ?? null }))
+      })).filter(m => m.total > 0 || m.completed > 0)
+    })).filter(i => i.modes.length)
+  })).filter(e => e.instances.length).reverse();
+}
+function normalizeMounts(data) {
+  return (data?.mounts || []).map(m => ({ id:m.mount?.id ?? null, name:m.mount?.name || 'Unknown Mount', favorite:Boolean(m.is_favorite), usable:m.is_useable !== false }));
+}
+function normalizePets(data) {
+  return (data?.pets || []).map(p => ({
+    id:p.species?.id ?? null, name:p.species?.name || 'Unknown Pet', level:p.level ?? null,
+    quality:p.quality?.name || p.quality?.type || null, qualityType:p.quality?.type || null,
+    favorite:Boolean(p.is_favorite), creatureId:p.creature?.id ?? null,
+    stats:p.stats ? { health:p.stats.health ?? null, power:p.stats.power ?? null, speed:p.stats.speed ?? null } : null
+  }));
 }
 
 export async function onRequestGet(context) {
@@ -103,7 +155,6 @@ export async function onRequestGet(context) {
   if (!env.BNET_CLIENT_ID || !env.BNET_CLIENT_SECRET) {
     return new Response(JSON.stringify({ error:'Battle.net credentials are unavailable to the character Armory function.' }), { status:503, headers:ERROR_HEADERS });
   }
-
   const requested = decodeURIComponent(String(context.params?.name || '')).trim();
   if (!requested || !/^[A-Za-zÀ-ÖØ-öø-ÿ'’-]{2,24}$/.test(requested)) {
     return new Response(JSON.stringify({ error:'Invalid character name.' }), { status:400, headers:ERROR_HEADERS });
@@ -121,63 +172,50 @@ export async function onRequestGet(context) {
     const slug = encodeURIComponent(name.toLowerCase());
     const base = `https://${REGION}.api.blizzard.com/profile/wow/character/${realmSlug}/${slug}`;
 
-    const [profile, mediaData, equipmentData, statsData, achievementsData, rio] = await Promise.all([
+    const [profile, mediaData, equipmentData, statsData, achievementsData, raidsData, mountsData, petsData, rio] = await Promise.all([
       fetchJson(`${base}?namespace=profile-${REGION}&locale=en_US`, token, true),
       fetchJson(`${base}/character-media?namespace=profile-${REGION}&locale=en_US`, token, false),
       fetchJson(`${base}/equipment?namespace=profile-${REGION}&locale=en_US`, token, false),
       fetchJson(`${base}/statistics?namespace=profile-${REGION}&locale=en_US`, token, false),
       fetchJson(`${base}/achievements?namespace=profile-${REGION}&locale=en_US`, token, false),
+      fetchJson(`${base}/encounters/raids?namespace=profile-${REGION}&locale=en_US`, token, false),
+      fetchJson(`${base}/collections/mounts?namespace=profile-${REGION}&locale=en_US`, token, false),
+      fetchJson(`${base}/collections/pets?namespace=profile-${REGION}&locale=en_US`, token, false),
       fetchRaiderIo(name, realmSlug)
     ]);
 
     const media = mediaMap(mediaData);
     const equipped = Array.isArray(equipmentData?.equipped_items) ? equipmentData.equipped_items : [];
-    const gear = await Promise.all(equipped.map(async item => ({
-      slot:item.slot?.name || item.slot?.type || 'Gear',
-      slotType:item.slot?.type || '',
-      name:item.name || `Item ${item.item?.id || ''}`,
-      itemId:item.item?.id || null,
-      itemLevel:item.level?.value ?? null,
-      quality:item.quality?.name || item.quality?.type || null,
-      qualityType:item.quality?.type || null,
-      qualityColor:qualityColor(item.quality?.type),
-      icon:await getItemIcon(item.item?.id, token),
-      enchantments:(item.enchantments || []).map(e => e.display_string).filter(Boolean)
-    })));
-
+    const gear = await Promise.all(equipped.map(async item => normalizeGearItem(item, await getItemIcon(item.item?.id, token))));
     const apiRank = Number.isFinite(entry.rank) ? entry.rank : Number(entry.rank || 0);
+
     const stats = statsData ? {
-      health:normalizeStat(statsData.health), power:normalizeStat(statsData.power),
-      strength:normalizeStat(statsData.strength), agility:normalizeStat(statsData.agility), intellect:normalizeStat(statsData.intellect), stamina:normalizeStat(statsData.stamina),
-      crit:normalizeStat(statsData.melee_crit) ?? normalizeStat(statsData.spell_crit),
-      haste:normalizeStat(statsData.melee_haste) ?? normalizeStat(statsData.spell_haste),
-      mastery:normalizeStat(statsData.mastery), versatility:normalizeStat(statsData.versatility), armor:normalizeStat(statsData.armor)
+      health:statsData.health ?? null, power:statsData.power ?? null, powerType:statsData.power_type?.name || 'Power',
+      strength:effective(statsData.strength), agility:effective(statsData.agility), intellect:effective(statsData.intellect), stamina:effective(statsData.stamina),
+      crit:ratedValue(statsData.melee_crit) ?? ratedValue(statsData.ranged_crit) ?? ratedValue(statsData.spell_crit),
+      haste:ratedValue(statsData.melee_haste) ?? ratedValue(statsData.ranged_haste) ?? ratedValue(statsData.spell_haste),
+      mastery:ratedValue(statsData.mastery), versatility:statsData.versatility_damage_done_bonus ?? statsData.versatility_healing_done_bonus ?? null,
+      versatilityRating:statsData.versatility ?? null, armor:effective(statsData.armor), attackPower:statsData.attack_power ?? null,
+      spellPower:statsData.spell_power ?? null
     } : null;
 
     return new Response(JSON.stringify({
       guild:{ name:'Poon Platoon', realm:'Area 52', rank:GUILD_RANKS[apiRank] || `Rank ${apiRank + 1}`, apiRank },
       character:{
-        name:profile.name || name,
-        level:profile.level ?? entry.character.level ?? null,
-        className:profile.character_class?.name || null,
-        raceName:profile.race?.name || null,
-        activeSpec:profile.active_spec?.name || rio.activeSpec || null,
-        faction:profile.faction?.name || null,
-        gender:profile.gender?.name || null,
-        title:profile.active_title?.display_string?.replace('{name}', profile.name || name) || null,
+        name:profile.name || name, level:profile.level ?? entry.character.level ?? null,
+        className:profile.character_class?.name || null, raceName:profile.race?.name || null,
+        activeSpec:profile.active_spec?.name || rio.activeSpec || null, faction:profile.faction?.name || null,
+        gender:profile.gender?.name || null, title:profile.active_title?.display_string?.replace('{name}', profile.name || name) || null,
         achievementPoints:profile.achievement_points ?? achievementsData?.total_points ?? null,
-        equippedItemLevel:profile.equipped_item_level ?? rio.itemLevel ?? null,
-        averageItemLevel:profile.average_item_level ?? null,
+        equippedItemLevel:profile.equipped_item_level ?? rio.itemLevel ?? null, averageItemLevel:profile.average_item_level ?? null,
         armoryUrl:`https://worldofwarcraft.blizzard.com/en-us/character/us/${realmSlug}/${slug}`,
-        raiderIoUrl:rio.profileUrl || `https://raider.io/characters/us/${realmSlug}/${encodeURIComponent(name)}`,
-        realmSlug
+        raiderIoUrl:rio.profileUrl || `https://raider.io/characters/us/${realmSlug}/${encodeURIComponent(name)}`, realmSlug
       },
       media:{ avatar:media.avatar || null, inset:media.inset || null, mainRaw:media['main-raw'] || media.main || null },
-      gear,
-      stats,
+      gear, stats,
       achievements:{ totalPoints:achievementsData?.total_points ?? profile.achievement_points ?? null, totalQuantity:achievementsData?.total_quantity ?? null },
-      raiderIo:rio,
-      updatedAt:new Date().toISOString()
+      raids:normalizeRaids(raidsData), collections:{ mounts:normalizeMounts(mountsData), pets:normalizePets(petsData) },
+      raiderIo:rio, updatedAt:new Date().toISOString()
     }), { status:200, headers:JSON_HEADERS });
   } catch (error) {
     return new Response(JSON.stringify({ error:error.message || 'Unable to load this character.' }), { status:502, headers:ERROR_HEADERS });

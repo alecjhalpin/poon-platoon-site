@@ -178,3 +178,12 @@ async function loadRoster() {
 rosterSearch?.addEventListener('input', renderRoster);
 rosterRankFilter?.addEventListener('change', renderRoster);
 loadRoster();
+
+// Entire Armory character card is clickable; nested external links keep their own actions.
+document.addEventListener('click', (event) => {
+  const card = event.target.closest?.('.armory-card');
+  if (!card) return;
+  if (event.target.closest('a,button,input,select,label')) return;
+  const link = card.querySelector('.character-card-link');
+  if (link?.href) window.location.href = link.href;
+});

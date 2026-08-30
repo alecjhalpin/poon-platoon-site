@@ -91,3 +91,12 @@ Blizzard API rank 0 = Guild Master in Blizzard's UI.
 ## Notes
 
 Blizzard and Raider.IO can independently lag behind in-game changes. The site is designed so Raider.IO being unavailable does not break Blizzard-backed character pages.
+
+## Armory V3
+- Corrected Armory war-room branding to use the real PP + peach medallion.
+- Enlarged/positioned Blizzard character render.
+- Corrected Blizzard Character Statistics mappings (`effective`, rated-stat `value`, versatility bonus).
+- Added WoW-style gear hover tooltips using Blizzard equipment fields.
+- Made the whole character card clickable while preserving external buttons.
+- Added Blizzard raid encounter progression by difficulty.
+- Added searchable Blizzard Mounts + Pets collections.

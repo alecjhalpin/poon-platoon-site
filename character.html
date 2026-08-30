@@ -61,7 +61,9 @@
           <div class="character-tabs" role="tablist" aria-label="Character Armory sections">
             <button class="character-tab active" data-tab="gear" type="button">Gear</button>
             <button class="character-tab" data-tab="stats" type="button">Stats</button>
-            <button class="character-tab" data-tab="progress" type="button">Progression</button>
+            <button class="character-tab" data-tab="progress" type="button">Mythic+</button>
+            <button class="character-tab" data-tab="raids" type="button">Raids</button>
+            <button class="character-tab" data-tab="collections" type="button">Collections</button>
             <button class="character-tab" data-tab="achievements" type="button">Achievements</button>
           </div>
         </div>
@@ -76,8 +78,16 @@
             <div id="stats-grid" class="detail-stats-grid"></div>
           </section>
           <section class="character-pane" data-pane="progress">
-            <div class="pane-heading"><span>Progression</span><small>Raider.IO character enrichment</small></div>
+            <div class="pane-heading"><span>Mythic+ Progression</span><small>Raider.IO character enrichment</small></div>
             <div id="progress-grid" class="progress-grid"></div>
+          </section>
+          <section class="character-pane" data-pane="raids">
+            <div class="pane-heading"><span>Raid Progression</span><small>Blizzard encounter data · LFR / Normal / Heroic / Mythic</small></div>
+            <div id="raid-progression-content" class="raid-progression-content"></div>
+          </section>
+          <section class="character-pane" data-pane="collections">
+            <div class="pane-heading"><span>Collections</span><small>Character collection data from Blizzard</small></div>
+            <div id="collections-content"></div>
           </section>
           <section class="character-pane" data-pane="achievements">
             <div class="pane-heading"><span>Achievements</span><small>Blizzard achievement summary</small></div>
