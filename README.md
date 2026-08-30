@@ -48,3 +48,23 @@ For this plain static site there is no build command and the output directory is
 - Open Graph/Twitter social preview metadata
 - Custom 404 page
 - robots.txt and sitemap.xml
+
+## Live Blizzard roster
+
+This build includes a Cloudflare Pages Function at `functions/api/roster.js` and a live roster section on the homepage.
+
+The function uses Blizzard's official WoW Profile API. Add these two encrypted environment variables in the Cloudflare Pages project:
+
+- `BNET_CLIENT_ID`
+- `BNET_CLIENT_SECRET`
+
+Create the credentials from a Battle.net Developer API client. Never put the client secret in `script.js` or any browser-visible file.
+
+Rank mapping is intentionally based on Blizzard's zero-based API field versus the Armory's one-based UI labels:
+
+- API rank 0 / Guild Master -> Poon Daddy
+- API rank 1 / Armory Rank 2 -> VP of Poon
+- API rank 2 / Armory Rank 3 -> Goddess of Poon
+- API rank 3 / Armory Rank 4 -> Poon Connoisseur
+- API rank 4 / Armory Rank 5 -> Poon Trooper
+- API rank 5 / Armory Rank 6 -> Poon Searcher
