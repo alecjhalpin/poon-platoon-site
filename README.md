@@ -5,7 +5,7 @@ Static website ready for Cloudflare Pages.
 ## Files
 - `index.html` — site markup/content
 - `styles.css` — all styling/responsive design
-- `script.js` — Discord URL + menu/animations
+- `script.js` — Discord URL + menu/animations    
 - `assets/poon-platoon-logo.png` — full cross-faction crest
 - `assets/pp-medallion.png` — PP icon / favicon
 
