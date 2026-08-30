@@ -7,7 +7,8 @@ document.querySelectorAll('.discord-link').forEach(link => {
   link.href = SITE_CONFIG.discordInvite;
 });
 
-document.getElementById('year').textContent = new Date().getFullYear();
+const yearEl = document.getElementById('year');
+if (yearEl) yearEl.textContent = new Date().getFullYear();
 
 const navToggle = document.querySelector('.nav-toggle');
 const navLinks = document.querySelector('.nav-links');
@@ -27,18 +28,19 @@ const observer = new IntersectionObserver(entries => {
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-// Tiny ambient particles. Purely decorative and intentionally lightweight.
 const emberBox = document.getElementById('embers');
-for (let i = 0; i < 22; i++) {
-  const ember = document.createElement('span');
-  ember.style.left = `${Math.random() * 100}%`;
-  ember.style.animationDuration = `${12 + Math.random() * 16}s`;
-  ember.style.animationDelay = `${-Math.random() * 20}s`;
-  ember.style.opacity = `${0.12 + Math.random() * 0.28}`;
-  emberBox.appendChild(ember);
+if (emberBox) {
+  for (let i = 0; i < 22; i++) {
+    const ember = document.createElement('span');
+    ember.style.left = `${Math.random() * 100}%`;
+    ember.style.animationDuration = `${12 + Math.random() * 16}s`;
+    ember.style.animationDelay = `${-Math.random() * 20}s`;
+    ember.style.opacity = `${0.12 + Math.random() * 0.28}`;
+    emberBox.appendChild(ember);
+  }
 }
 
-// === LIVE POON PLATOON ROSTER ===
+// === LIVE POON PLATOON ARMORY ===
 const rosterGrid = document.getElementById('roster-grid');
 const rosterLoading = document.getElementById('roster-loading');
 const rosterError = document.getElementById('roster-error');
@@ -58,12 +60,45 @@ function escapeHtml(value = '') {
   return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 }
 
+function setArmoryState(state, message = '') {
+  if (rosterLoading) {
+    rosterLoading.hidden = state !== 'loading';
+    rosterLoading.style.display = state === 'loading' ? 'flex' : 'none';
+  }
+  if (rosterError) {
+    rosterError.hidden = state !== 'error';
+    rosterError.style.display = state === 'error' ? 'flex' : 'none';
+  }
+  if (state === 'error' && rosterErrorText) rosterErrorText.textContent = message;
+}
+
+function formatScore(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  return Math.round(n).toLocaleString();
+}
+
+function formatIlvl(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n).toString() : '—';
+}
+
+function raidLabel(raid) {
+  if (!raid) return '—';
+  if (raid.summary) return raid.summary;
+  if (raid.mythic > 0) return `${raid.mythic}/${raid.totalBosses || '?'} M`;
+  if (raid.heroic > 0) return `${raid.heroic}/${raid.totalBosses || '?'} H`;
+  if (raid.normal > 0) return `${raid.normal}/${raid.totalBosses || '?'} N`;
+  return '—';
+}
+
 function renderRoster() {
   if (!rosterGrid) return;
   const query = (rosterSearch?.value || '').trim().toLowerCase();
   const rank = rosterRankFilter?.value || 'all';
   const shown = rosterMembers.filter(m => {
-    const haystack = `${m.name} ${m.className} ${m.raceName} ${m.guildRank}`.toLowerCase();
+    const rio = m.raiderIo || {};
+    const haystack = `${m.name} ${m.className} ${m.raceName} ${m.guildRank} ${rio.activeSpec || ''}`.toLowerCase();
     return (!query || haystack.includes(query)) && (rank === 'all' || m.guildRank === rank);
   });
 
@@ -73,20 +108,36 @@ function renderRoster() {
   }
 
   rosterGrid.innerHTML = shown.map((m, i) => {
+    const rio = m.raiderIo || {};
     const classColor = CLASS_COLORS[m.className] || '#e6b955';
-    return `<article class="roster-card" style="--class-color:${classColor};animation-delay:${Math.min(i * 35, 350)}ms">
-      <div class="roster-card-top">
+    const portrait = rio.thumbnailUrl
+      ? `<img class="armory-portrait" src="${escapeHtml(rio.thumbnailUrl)}" alt="${escapeHtml(m.name)} portrait" loading="lazy" />`
+      : `<div class="armory-portrait armory-portrait-fallback">PP</div>`;
+    const specText = rio.available && rio.activeSpec ? ` · ${escapeHtml(rio.activeSpec)}` : '';
+    const rioState = rio.available ? '' : `<span class="rio-pending">Raider.IO pending</span>`;
+
+    return `<article class="roster-card armory-card" style="--class-color:${classColor};animation-delay:${Math.min(i * 35, 350)}ms">
+      <div class="armory-card-header">
+        ${portrait}
         <div class="roster-name-wrap">
           <h3 class="roster-name">${escapeHtml(m.name)}</h3>
-          <div class="roster-character-meta"><span class="roster-class">${escapeHtml(m.className)}</span> · ${escapeHtml(m.raceName)}</div>
+          <div class="roster-character-meta"><span class="roster-class">${escapeHtml(m.className)}</span>${specText} · ${escapeHtml(m.raceName)}</div>
         </div>
         <span class="roster-rank-badge">${escapeHtml(m.guildRank)}</span>
       </div>
-      <div class="roster-card-bottom">
-        <div class="roster-level"><small>Level</small><strong>${escapeHtml(m.level)}</strong></div>
+
+      <div class="armory-stats">
+        <div class="armory-stat"><small>LEVEL</small><strong>${escapeHtml(m.level)}</strong></div>
+        <div class="armory-stat"><small>ITEM LEVEL</small><strong>${formatIlvl(rio.itemLevel)}</strong></div>
+        <div class="armory-stat"><small>MYTHIC+ SCORE</small><strong>${formatScore(rio.mythicPlusScore)}</strong></div>
+        <div class="armory-stat"><small>RAID</small><strong>${escapeHtml(raidLabel(rio.raid))}</strong></div>
+      </div>
+
+      <div class="armory-card-footer">
+        ${rioState}
         <div class="roster-links">
-          <a href="${escapeHtml(m.armoryUrl)}" target="_blank" rel="noopener">ARMORY ↗</a>
-          <a href="${escapeHtml(m.raiderIoUrl)}" target="_blank" rel="noopener">RAIDER.IO ↗</a>
+          <a href="${escapeHtml(m.armoryUrl)}" target="_blank" rel="noopener">WOW ARMORY ↗</a>
+          <a href="${escapeHtml(rio.profileUrl || m.raiderIoUrl)}" target="_blank" rel="noopener">RAIDER.IO ↗</a>
         </div>
       </div>
     </article>`;
@@ -95,20 +146,32 @@ function renderRoster() {
 
 async function loadRoster() {
   if (!rosterGrid) return;
+  setArmoryState('loading');
   try {
-    const response = await fetch('/api/roster', { headers: { 'Accept': 'application/json' } });
+    const response = await fetch(`/api/roster?v=${Date.now()}`, {
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
+    });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Roster request failed (${response.status})`);
+    if (!response.ok) throw new Error(data.error || `Armory request failed (${response.status})`);
+
     rosterMembers = Array.isArray(data.members) ? data.members : [];
-    rosterLoading.hidden = true;
-    rosterError.hidden = true;
-    rosterStatusText.textContent = `${rosterMembers.length} ${rosterMembers.length === 1 ? 'member' : 'members'} on active duty · Area 52`;
+    setArmoryState('success');
+
+    const rioCount = Number(data.raiderIoProfilesFound || 0);
+    if (rosterStatusText) {
+      rosterStatusText.textContent = `${rosterMembers.length} ${rosterMembers.length === 1 ? 'member' : 'members'} · ${rioCount} Raider.IO profiles linked · Area 52`;
+    }
     renderRoster();
   } catch (error) {
-    rosterLoading.hidden = true;
-    rosterError.hidden = false;
-    rosterErrorText.textContent = error.message || 'Blizzard did Blizzard things. Try again in a minute.';
-    rosterStatusText.textContent = 'Roster link offline';
+    // Never cover a roster that already rendered successfully with a later transient error.
+    if (rosterMembers.length) {
+      setArmoryState('success');
+      if (rosterStatusText) rosterStatusText.textContent = `${rosterMembers.length} members · cached view`;
+      return;
+    }
+    setArmoryState('error', error.message || 'Blizzard did Blizzard things. Try again in a minute.');
+    if (rosterStatusText) rosterStatusText.textContent = 'Armory link offline';
   }
 }
 

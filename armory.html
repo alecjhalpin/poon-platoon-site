@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#080a10" />
+  <title>Poon Armory | Poon Platoon</title>
+  <meta name="description" content="The Poon Armory: live Poon Platoon characters on Area 52, powered by Blizzard and enriched with Raider.IO data." />
+  <meta name="keywords" content="Poon Platoon, World of Warcraft guild, WoW guild, cross-faction guild, Mythic Plus guild, WoW raids, WoW PvP, WoW community" />
+  <meta name="robots" content="index, follow" />
+  <meta name="author" content="Poon Platoon" />
+  <link rel="canonical" href="https://poonplatoon.com/armory" />
+
+  <meta property="og:site_name" content="Poon Platoon" />
+  <meta property="og:title" content="Poon Armory | Poon Platoon" />
+  <meta property="og:description" content="Cross-faction World of Warcraft guild for Mythic+, raids, PvP, collecting, leveling, and general bullshittery." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://poonplatoon.com/armory" />
+  <meta property="og:image" content="https://poonplatoon.com/assets/poon-platoon-logo.png" />
+  <meta property="og:image:alt" content="Poon Platoon Alliance and Horde guild crest" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Poon Platoon | No Poon Left Behind" />
+  <meta name="twitter:description" content="Cross-faction World of Warcraft guild for Mythic+, raids, PvP, collecting, leveling, and general bullshittery." />
+  <meta name="twitter:image" content="https://poonplatoon.com/assets/poon-platoon-logo.png" />
+
+  <link rel="icon" href="assets/pp-medallion.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true">
+    <div class="faction-glow alliance"></div><div class="faction-glow horde"></div><div class="embers" id="embers"></div>
+  </div>
+  <header class="site-header" id="top">
+    <a class="brand" href="index.html" aria-label="Poon Platoon home"><img src="assets/pp-medallion.png" alt="" /><span>POON PLATOON</span></a>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="nav-links" aria-label="Primary navigation">
+      <a href="index.html#about">About</a><a href="index.html#activities">Operations</a><a href="index.html#ranks">Ranks</a><a href="armory.html" aria-current="page">Armory</a><a href="index.html#recruitment">Recruitment</a><a class="nav-cta discord-link" href="#" target="_blank" rel="noopener">Discord</a>
+    </nav>
+  </header>
+  <main class="roster-page-main">
+    <section class="section section-shell roster-section" id="armory" style="padding-top:120px">
+      <div class="section-heading reveal">
+        <p class="eyebrow">LIVE CHARACTER DATA</p>
+        <h2>The Poon Armory.</h2>
+        <p class="roster-intro">Every soldier. Every class. Every questionable character name. The guild roster comes from Blizzard, then each character is enriched with Raider.IO data for spec, item level, Mythic+ score, raid progress, and portraits.</p>
+      </div>
+
+      <div class="roster-toolbar reveal">
+        <div class="roster-status">
+          <span class="roster-live-dot" aria-hidden="true"></span>
+          <span id="roster-status-text">Calling roll...</span>
+        </div>
+        <div class="roster-controls">
+          <label class="sr-only" for="roster-search">Search Armory</label>
+          <input id="roster-search" class="roster-search" type="search" placeholder="Search the Platoon..." autocomplete="off" />
+          <select id="roster-rank-filter" class="roster-filter" aria-label="Filter by guild rank">
+            <option value="all">All ranks</option>
+            <option value="Poon Daddy">Poon Daddy</option>
+            <option value="VP of Poon">VP of Poon</option>
+            <option value="Goddess of Poon">Goddess of Poon</option>
+            <option value="Poon Connoisseur">Poon Connoisseur</option>
+            <option value="Poon Trooper">Poon Trooper</option>
+            <option value="Poon Searcher">Poon Searcher</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="roster-loading" class="roster-loading reveal">
+        <img src="assets/pp-medallion.png" alt="" />
+        <div>
+          <strong>Assembling the Platoon...</strong>
+          <span>Checking Blizzard and Raider.IO for anyone brave enough to wear the guild name in public.</span>
+        </div>
+      </div>
+
+      <div id="roster-grid" class="roster-grid" aria-live="polite"></div>
+
+      <div id="roster-error" class="roster-error" hidden>
+        <img src="assets/pp-medallion.png" alt="" />
+        <div>
+          <strong>The Armory is temporarily MIA.</strong>
+          <span id="roster-error-text">Blizzard did Blizzard things. Try again in a minute.</span>
+        </div>
+      </div>
+
+      <div class="roster-footer reveal">
+        <span>Ranks shown here follow the Platoon chain of command: Guild Master → Poon Daddy, Rank 2 → VP of Poon, Rank 3 → Goddess of Poon, and so on.</span>
+        <a href="https://worldofwarcraft.blizzard.com/en-us/worldsoul/us/armory/guild/area-52/poon-platoon" target="_blank" rel="noopener">View Guild on WoW Armory ↗</a>
+      </div>
+    </section>
+
+  </main>
+  <footer class="footer section-shell"><div class="footer-brand"><img src="assets/pp-medallion.png" alt="" /><div><strong>POON PLATOON</strong><span>No Poon Left Behind.</span></div></div><p>© <span id="year"></span> Poon Platoon — All Poon Reserved.</p></footer>
+  <script src="script.js"></script>
+</body>
+</html>

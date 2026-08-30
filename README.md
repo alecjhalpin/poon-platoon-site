@@ -1,6 +1,6 @@
 # Poon Platoon Website
 
-Static website ready for Cloudflare Pages.       
+Static website ready for Cloudflare Pages.
 
 ## Files
 - `index.html` — site markup/content
@@ -68,3 +68,11 @@ Rank mapping is intentionally based on Blizzard's zero-based API field versus th
 - API rank 3 / Armory Rank 4 -> Poon Connoisseur
 - API rank 4 / Armory Rank 5 -> Poon Trooper
 - API rank 5 / Armory Rank 6 -> Poon Searcher
+
+## Poon Armory enrichment
+This build renames the public Roster page to Armory and keeps `/roster` redirected to `/armory`.
+The Cloudflare Pages Function still uses the exact Production variables:
+- `BNET_CLIENT_ID`
+- `BNET_CLIENT_SECRET`
+
+Blizzard remains the authoritative guild roster. Each returned guild character is then looked up individually through Raider.IO's public character profile API, so Raider.IO guild indexing is not required for character enrichment. The cards can show active spec, equipped item level, current Mythic+ score, raid progress, portrait, WoW Armory link, and Raider.IO link when that character profile is available.

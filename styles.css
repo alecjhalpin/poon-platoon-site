@@ -116,3 +116,18 @@ button{font:inherit}
 @media(max-width:760px){.roster-toolbar{align-items:stretch;flex-direction:column}.roster-controls{display:grid;grid-template-columns:1fr}.roster-search{width:100%}.roster-grid{grid-template-columns:1fr}.roster-footer{flex-direction:column}.roster-loading,.roster-error{text-align:center;flex-direction:column}.roster-footer a{flex:auto}.roster-card{min-height:180px}}
 
 [hidden]{display:none!important}
+
+/* === POON ARMORY ENRICHED CHARACTER CARDS === */
+.armory-card{min-height:285px;padding:22px;display:flex;flex-direction:column}
+.armory-card-header{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:start;gap:14px;position:relative;z-index:1}
+.armory-portrait{width:58px;height:58px;border-radius:12px;object-fit:cover;border:1px solid color-mix(in srgb,var(--class-color,#e6b955) 55%,transparent);background:#0b0e14;box-shadow:0 8px 22px rgba(0,0,0,.32)}
+.armory-portrait-fallback{display:grid;place-items:center;font-family:Cinzel,serif;font-weight:800;color:var(--gold);background:linear-gradient(135deg,rgba(230,185,85,.13),rgba(255,255,255,.03))}
+.armory-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:28px;position:relative;z-index:1}
+.armory-stat{padding:10px 9px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055);min-width:0}
+.armory-stat small{display:block;color:#69717f;font-weight:800;font-size:.58rem;letter-spacing:.11em;white-space:nowrap}
+.armory-stat strong{display:block;margin-top:2px;color:#f0eee9;font-family:Cinzel,serif;font-size:.96rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.armory-card-footer{margin-top:auto;padding-top:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;z-index:1}
+.armory-card .roster-links{display:flex;gap:8px;margin-left:auto}
+.rio-pending{font-size:.68rem;color:#777f8d}
+@media(max-width:1100px){.armory-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.armory-card-header{grid-template-columns:52px minmax(0,1fr)}.armory-portrait{width:52px;height:52px}.armory-card-header .roster-rank-badge{grid-column:1/-1;justify-self:start}.armory-card-footer{align-items:flex-start;flex-direction:column}.armory-card .roster-links{margin-left:0;width:100%}.armory-card .roster-links a{flex:1;text-align:center}}
